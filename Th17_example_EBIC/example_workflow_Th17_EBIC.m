@@ -1,7 +1,11 @@
-%% example_workflow_Th17
-% Use mLASSO-StARS to build a TRN from gene expression and prior
+%% example_workflow_Th17_EBIC
+% Use mLASSO-EBIC to build a TRN from gene expression and prior
 % information in four steps. Please refer to each function's help
 % annotations for descriptions of inputs, outputs and other information.
+%% Highlited Changes:
+% Steps 1,2, and 5 (-> 4 here) are consistent with "example_workflow_TH17", 
+% but step 3 now uses EBIC in order to select model parameters for bootstrapped 
+% samples, edges are ranked by confidence scores and rank combined. 
 %% References: 
 % (1) Miraldi et al. (2018) "Leveraging chromatin accessibility for 
 % transcriptional regulatory network inference in T Helper 17 Cells"
@@ -12,9 +16,11 @@
 %   Inf. Proc.
 % (4) Muller, Kurtz, Bonneau. "Generalized Stability Approach for Regularized
 %   Graphical Models". 23 May 2016. arXiv.
-%% Author: Emily R. Miraldi, Ph.D., Divisions of Immunobiology and Biomedical
+%% Authors: Emily R. Miraldi, Ph.D., Divisions of Immunobiology and Biomedical
 %   Informatics, Cincinnati Children's Hospital
-%% Date: March 29, 2018
+% Peter DeWeirdt, Summer Intern, Divisions of Immunobiology and Biomedical
+%   Informatics, Cincinnati Children's Hospital
+%% Date: June 14, 2018 -PD
 
 clear all
 close all
@@ -22,6 +28,7 @@ restoredefaultpath
 
 matlabDir = '..';
 
+addpath(fullfile(matlabDir,'ebicFxns'))
 addpath(fullfile(matlabDir,'infLassoStARS'))
 addpath(fullfile(matlabDir,'glmnet'))
 addpath(fullfile(matlabDir,'customMatlabFxns'))
@@ -53,61 +60,29 @@ disp('2. integratePrior_estTFA.m')
 integratePrior_estTFA(geneExprMat,priorFile,edgeSS,...
      minTargets, tfaMat)
 
-%% 3. Calculate network instabilities using bStARS
-
+%% 3. use EBIC to select model parameters for bootstrapped 
+% samples, edges are ranked by confidence scores and rank combined.  
 lambdaBias = .5;
 tfaOpt = ''; % options are '_TFmRNA' or ''
-totSS = 50;
-targetInstability = .05;
+nBoots = 2;
+minFrac = 0.5; % Minimum fraction of bootstraps that an edge must be in to be included in the final network
 lambdaMin = .01;
 lambdaMax = 1;
-extensionLimit = 1;
 totLogLambdaSteps = 25; % will have this many steps per log10 within bStARS lambda range
-bStarsTotSS = 5;
-subsampleFrac = .63;
 leaveOutSampleList = '';
-leaveOutInf = '';
-instabilitiesDir = fullfile('./outputs',strrep(['instabilities_targ' ...
-    num2str(targetInstability) '_SS' num2str(totSS) leaveOutInf '_bS' num2str(bStarsTotSS)],'.','p'));
-mkdir(instabilitiesDir)
+leaveOutInf = ''; % leave out information 
+TRNweightedDir = fullfile('./outputs',strrep(['TRNweighted_boots' ...
+    num2str(nBoots) '_frac' num2str(minFrac) leaveOutInf],'.','p'));
+mkdir(TRNweightedDir)
 netSummary = [priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt];
-instabOutMat = fullfile(instabilitiesDir,netSummary);
+trnOutMat = fullfile(TRNweightedDir,netSummary);
 
-disp('3. estimateInstabilitiesTRNbStARS.m')
-estimateInstabilitiesTRNbStARS(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
-    totSS,targetInstability,lambdaMin,lambdaMax,totLogLambdaSteps,...
-    subsampleFrac,instabOutMat,leaveOutSampleList,bStarsTotSS,extensionLimit)
+disp('3. TRNebic.m')
+TRNebic(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
+    nboots,minFrac,lambdaMin,lambdaMax,totLogLambdaSteps,...
+    trnOutMat,leaveOutSampleList)
 
-%% 4. For a given instability cutoff and model size, rank TF-gene
-% interactions, calculate stabilities and network file for jp_gene_viz
-% visualizations
-priorMergedTfsFile = ['./inputs/priors/' priorName '_mergedTfs.txt'];
-try % not all priors have merged TFs and merged TF files
-    ls(priorMergedTfsFile) 
-catch
-    priorMergedTfsFile = '';
-end
-meanEdgesPerGene = 15;
-targetInstability = .05;
-networkDir = strrep(instabilitiesDir,'instabilities','networks');
-instabSource = 'Network';
-mkdir(networkDir);
-networkSubDir = fullfile(networkDir,[instabSource ...
-    strrep(num2str(targetInstability),'.','p') '_' ...
-    num2str(meanEdgesPerGene) 'tfsPerGene']);
-mkdir(networkSubDir)
-trnOutMat = fullfile(networkSubDir,netSummary);
-outNetFileSparse = fullfile(networkSubDir,[netSummary '_sp.tsv']);
-networkHistDir = fullfile(networkSubDir,'Histograms');
-mkdir(networkHistDir)
-subsampHistPdf = fullfile(networkHistDir,[netSummary '_ssHist']);
-
-disp('4. buildTRNs_mLassoStARS.m')
-buildTRNs_mLassoStARS(instabOutMat,tfaMat,priorMergedTfsFile,...
-    meanEdgesPerGene,targetInstability,instabSource,subsampHistPdf,trnOutMat,...
-    outNetFileSparse)
-
-%% 5. Calculate precision-recall relative to KO-ChIP G.S.
+%% 4. Calculate precision-recall relative to KO-ChIP G.S.
 gsFile = './inputs/priors/KC1p5_sp.tsv';
 prNickName = 'KC1p5';
 rankColTrn = 3;
