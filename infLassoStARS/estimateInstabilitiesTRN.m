@@ -12,7 +12,7 @@ function estimateInstabilitiesTRN(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
 %% References:
 % Miraldi et al. "Leveraging chromatin accessibility for 
 %   transcriptional regulatory network inference in T Helper 17 Cells"
-% Glmnet for Matlab (2013) Qian, J., Hastie, T., Friedman, J., Tibshirani, 
+%  for Matlab (2013) Qian, J., Hastie, T., Friedman, J., Tibshirani, 
 %   R. and Simon, N. -- http://www.stanford.edu/~hastie/glmnet_matlab/
 % Liu, Roeder, Wasserman (2010) "Stability Approach to Regularization 
 %   Selection (StARS) for High Dimensional Graphical Models". Adv. Neural.

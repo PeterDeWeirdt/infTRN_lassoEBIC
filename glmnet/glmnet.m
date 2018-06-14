@@ -9,7 +9,7 @@ function fit = glmnet(x, y, family, options)
 %    regularization path is computed for the lasso or elasticnet penalty 
 %    at a grid of values for the regularization parameter lambda. Can deal 
 %    with all shapes of data, including very large sparse data matrices. 
-%    Fits linear, logistic and multinomial, Poisson, and Cox regression 
+%    Fits linear, logistic and mult inomial, Poisson, and Cox regression 
 %    models.
 %
 % USAGE:
