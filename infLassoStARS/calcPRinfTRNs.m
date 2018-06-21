@@ -217,7 +217,8 @@ grid on, grid minor, box on
 axis([0 1 0 1])
 xlabel('Recall','FontSize',12)
 ylabel('Precision','Fontsize',12)
-title([infTitleBase],'FontSize',14)    
+title([infTitleBase],'FontSize',14)
+annotation('textbox',[.65 .75 0 0], 'String', ['aupr = ' num2str(gsInfs.auprs)], 'FitBoxToText', 'on', 'FontSize', 12)
 
 % ROC
 subplot(2,1,2)
@@ -229,6 +230,8 @@ axis([0 1 0 1])
 xlabel('FPR','FontSize',12)
 ylabel('TPR','Fontsize',12)
 title([infTitleBase],'FontSize',14)  
+annotation('textbox',[.65 .25 0 0], 'String', ['aroc = ' num2str(gsInfs.arocs)], 'FitBoxToText', 'on', 'FontSize', 12)
+
 
 if figOutBase    
     saveas(gcf,figOutBase,'fig')

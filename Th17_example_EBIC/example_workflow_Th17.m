@@ -31,7 +31,7 @@ addpath(fullfile(matlabDir,'customMatlabFxns'))
 geneExprTFAdir = './outputs/processedGeneExpTFA';
 mkdir(geneExprTFAdir)
 normGeneExprFile = './inputs/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt';
-targGeneFile = './inputs/targRegLists/short_targetGenes_names.txt';
+targGeneFile = './inputs/targRegLists/targetGenes_names.txt';
 potRegFile = './inputs/targRegLists/potRegs_names.txt';
 tfaGeneFile = './inputs/targRegLists/genesForTFA.txt';
 geneExprMat = fullfile(geneExprTFAdir,'geneExprGeneLists.mat');
@@ -87,7 +87,7 @@ try % not all priors have merged TFs and merged TF files
 catch
     priorMergedTfsFile = '';
 end
-meanEdgesPerGene = 15;
+meanEdgesPerGene = 8;
 targetInstability = .05;
 networkDir = strrep(instabilitiesDir,'instabilities','networks');
 instabSource = 'Network';

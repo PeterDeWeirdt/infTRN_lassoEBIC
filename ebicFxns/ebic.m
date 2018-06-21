@@ -1,4 +1,3 @@
-
 function [EBIC, optInd] = ebic(RSS, n_samps, n_nonzero, tot_preds, gamma)
 %% ebic
 % Use the Extended Bayesian Information Criterion (EBIC) 
@@ -31,6 +30,15 @@ function [EBIC, optInd] = ebic(RSS, n_samps, n_nonzero, tot_preds, gamma)
 %% Date: 6/13/2018
 EBIC = n_samps*arrayfun(@(x) log(x), (RSS/n_samps)) + ... 
     log(n_samps)*n_nonzero + ...
-    2*gamma*arrayfun(@(k) log(nchoosek(tot_preds, k)), n_nonzero);
+    2*gamma*arrayfun(@(k) getEP(tot_preds, k),...
+    n_nonzero);
 [~, optInd] = min(EBIC);
+end
+
+function ep = getEP(tot_preds, k)
+    if k == 0 || k == tot_preds
+        ep = 0; 
+    else
+        ep = (ApproxLnNFact(tot_preds) - (ApproxLnNFact(k) + ApproxLnNFact((tot_preds - k))));
+    end
 end

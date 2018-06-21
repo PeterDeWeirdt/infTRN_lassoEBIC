@@ -38,7 +38,7 @@ addpath(fullfile(matlabDir,'customMatlabFxns'))
 geneExprTFAdir = './outputs/processedGeneExpTFA';
 mkdir(geneExprTFAdir)
 normGeneExprFile = './inputs/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt';
-targGeneFile = './inputs/targRegLists/short_targetGenes_names.txt';
+targGeneFile = './inputs/targRegLists/targetGenes_names.txt';
 potRegFile = './inputs/targRegLists/potRegs_names.txt';
 tfaGeneFile = './inputs/targRegLists/genesForTFA.txt';
 geneExprMat = fullfile(geneExprTFAdir,'geneExprGeneLists.mat');
@@ -60,29 +60,59 @@ disp('2. integratePrior_estTFA.m')
 integratePrior_estTFA(geneExprMat,priorFile,edgeSS,...
      minTargets, tfaMat)
 
-%% 3. use EBIC to select model parameters for bootstrapped 
-% samples, edges are ranked by confidence scores and rank combined.  
+%% 3. Select model parameters using a specified method
+
 lambdaBias = .5;
 tfaOpt = ''; % options are '_TFmRNA' or ''
-nBoots = 2;
-minFrac = 0.5; % Minimum fraction of bootstraps that an edge must be in to be included in the final network
-lambdaMin = .01;
+lambdaMin = 0.01;
 lambdaMax = 1;
-totLogLambdaSteps = 25; % will have this many steps per log10 within bStARS lambda range
+totLogLambdaSteps = 5; % will have this many steps per log10 within bStARS lambda range
 leaveOutSampleList = '';
 leaveOutInf = ''; % leave out information 
-TRNweightedDir = fullfile('./outputs',strrep(['TRNweighted_boots' ...
-    num2str(nBoots) '_frac' num2str(minFrac) leaveOutInf],'.','p'));
-mkdir(TRNweightedDir)
+method = 'ebic'; % options rn are ebic, aic, bic... to do 'cv', 'StARS'
+fitDir = fullfile('./outputs',strrep(['fits_' method leaveOutInf],'.','p'));
+mkdir(fitDir)
 netSummary = [priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt];
-trnOutMat = fullfile(TRNweightedDir,netSummary);
+fitOutMat = fullfile(fitDir,netSummary);
+parallel = true; 
+if parallel
+    if isempty(gcp('nocreate'))
+        mypool = parpool();
+    end
+end
 
-disp('3. TRNebic.m')
-TRNebic(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
-    nboots,minFrac,lambdaMin,lambdaMax,totLogLambdaSteps,...
-    trnOutMat,leaveOutSampleList)
+disp('3. estimateFitTRN.m')
+EstimateFitTRN(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
+    method,lambdaMin,lambdaMax,totLogLambdaSteps,...
+    fitOutMat,leaveOutSampleList, parallel)
 
-%% 4. Calculate precision-recall relative to KO-ChIP G.S.
+%% 4. For the minimum fit score, rank TF-gene
+% interactions, calculate confidences and network file for jp_gene_viz
+% visualizations
+priorMergedTfsFile = ['./inputs/priors/' priorName '_mergedTfs.txt'];
+try % not all priors have merged TFs and merged TF files
+    ls(priorMergedTfsFile) 
+catch
+    priorMergedTfsFile = '';
+end
+nboot = 50;
+bootCut = .5;
+rankMethod = 'confidence'; % rank or confidence
+networkDir = strrep(fitDir,'fits','networks');
+mkdir(networkDir);
+networkSubDir = fullfile(networkDir,[num2str(nboot) 'bootstraps_' ...
+    strrep(num2str(bootCut), '.', 'p') 'cutoff']);
+mkdir(networkSubDir)
+trnOutMat = fullfile(networkSubDir,netSummary);
+outNetFileSparse = fullfile(networkSubDir,[netSummary '_sp.tsv']);
+networkHistDir = fullfile(networkSubDir,'Histograms');
+mkdir(networkHistDir)
+bootsHistPdf = fullfile(networkHistDir,[netSummary '_bsHist']);
+
+disp('4. buildTRNs_mLassoStARS.m')
+buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,...
+    bootCut, nboot, parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse)
+%% 5. Calculate precision-recall relative to KO-ChIP G.S.
 gsFile = './inputs/priors/KC1p5_sp.tsv';
 prNickName = 'KC1p5';
 rankColTrn = 3;

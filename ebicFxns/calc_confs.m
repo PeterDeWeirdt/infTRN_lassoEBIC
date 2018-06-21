@@ -29,7 +29,7 @@ for i = nzero
     sigma_i =  var((X*Bno_i + A0) - Y);
     confs(i) = 1 - (sigma/sigma_i);
 end
-[~,~,rev_rnk] = unique(confs);
-rnk = rev_rnk + (max(rev_rnk) - rev_rnk) - (rev_rnk - min(rev_rnk));
+[~,~,rnk] = unique(confs);
+rnk = rnk - 1;
 end
 
