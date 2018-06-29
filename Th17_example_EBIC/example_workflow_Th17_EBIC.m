@@ -1,11 +1,11 @@
 %% example_workflow_Th17_EBIC
 % Use mLASSO-EBIC to build a TRN from gene expression and prior
-% information in four steps. Please refer to each function's help
+% information in five steps. Please refer to each function's help
 % annotations for descriptions of inputs, outputs and other information.
 %% Highlited Changes:
-% Steps 1,2, and 5 (-> 4 here) are consistent with "example_workflow_TH17", 
-% but step 3 now uses EBIC in order to select model parameters for bootstrapped 
-% samples, edges are ranked by confidence scores and rank combined. 
+% Steps 1,2, and 5 are consistent with "example_workflow_TH17", 
+% but step 3 now uses EBIC in order to select model parameters (with aic and bic as additional options)
+% then in step 4 edges are ranked by confidence scores acrross bootstraps. 
 %% References: 
 % (1) Miraldi et al. (2018) "Leveraging chromatin accessibility for 
 % transcriptional regulatory network inference in T Helper 17 Cells"
@@ -16,6 +16,8 @@
 %   Inf. Proc.
 % (4) Muller, Kurtz, Bonneau. "Generalized Stability Approach for Regularized
 %   Graphical Models". 23 May 2016. arXiv.
+% (5) Castro, De Veaux, Miraldi, Bonneau "Multitask learning for joint
+%   inference of gene regulatory networks form several expression datasets"
 %% Authors: Emily R. Miraldi, Ph.D., Divisions of Immunobiology and Biomedical
 %   Informatics, Cincinnati Children's Hospital
 % Peter DeWeirdt, Summer Intern, Divisions of Immunobiology and Biomedical
@@ -32,13 +34,14 @@ addpath(fullfile(matlabDir,'ebicFxns'))
 addpath(fullfile(matlabDir,'infLassoStARS'))
 addpath(fullfile(matlabDir,'glmnet'))
 addpath(fullfile(matlabDir,'customMatlabFxns'))
+addpath(fullfile(matlabDir,'MALSAR'))
 
 %% 1. Import gene expression data, list of regulators, list of target genes
 % into a Matlab .mat object
 geneExprTFAdir = './outputs/processedGeneExpTFA';
 mkdir(geneExprTFAdir)
-normGeneExprFile = './inputs/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt';
-targGeneFile = './inputs/targRegLists/targetGenes_names.txt';
+normGeneExprFile = './inputs/geneExpression/microarray_data_mm10.txt';
+targGeneFile = './inputs/targRegLists/targetGenes_names_overlap.txt';
 potRegFile = './inputs/targRegLists/potRegs_names.txt';
 tfaGeneFile = './inputs/targRegLists/genesForTFA.txt';
 geneExprMat = fullfile(geneExprTFAdir,'geneExprGeneLists.mat');
@@ -69,7 +72,7 @@ lambdaMax = 1;
 totLogLambdaSteps = 5; % will have this many steps per log10 within bStARS lambda range
 leaveOutSampleList = '';
 leaveOutInf = ''; % leave out information 
-method = 'ebic'; % options rn are ebic, aic, bic... to do 'cv', 'StARS'
+method = 'ebic'; % options are ebic, aic, bic
 fitDir = fullfile('./outputs',strrep(['fits_' method leaveOutInf],'.','p'));
 mkdir(fitDir)
 netSummary = [priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt];
@@ -96,8 +99,8 @@ catch
     priorMergedTfsFile = '';
 end
 nboot = 50;
-bootCut = .5;
-rankMethod = 'confidence'; % rank or confidence
+bootCut = .01; %Must show up in greater than this many bootstraps to be included in the final model
+rankMethod = 'confidence'; % options are rank or confidence
 networkDir = strrep(fitDir,'fits','networks');
 mkdir(networkDir);
 networkSubDir = fullfile(networkDir,[num2str(nboot) 'bootstraps_' ...
@@ -109,14 +112,14 @@ networkHistDir = fullfile(networkSubDir,'Histograms');
 mkdir(networkHistDir)
 bootsHistPdf = fullfile(networkHistDir,[netSummary '_bsHist']);
 
-disp('4. buildTRNs_mLassoStARS.m')
+disp('4. buildTRNs_mLassoFit.m')
 buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,...
     bootCut, nboot, parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse)
 %% 5. Calculate precision-recall relative to KO-ChIP G.S.
 gsFile = './inputs/priors/KC1p5_sp.tsv';
 prNickName = 'KC1p5';
 rankColTrn = 3;
-prTargGeneFile = './inputs/priors/goldStandardGeneLists/targGenesPR_mm9mm10.txt';
+prTargGeneFile = './inputs/priors/goldStandardGeneLists/targGenesPR_mm9mm10_overlap.txt';
 gsRegsFile = '';
 prDir = fullfile(networkSubDir,['PR_' prNickName]);
 mkdir(prDir)

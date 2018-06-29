@@ -13,9 +13,8 @@ function [confs, rnk] = calc_confs(B, A0, X, Y)
 % Y - response matrix
 %% Output:
 % confs - the confidence score for each coefficient
-% rnk - vector of ranks for each edge. 1 indicates the coefficient we are
-% most confident in. Gives all of the 0 confidence scores the lowest
-% possible rank. 
+% rnk - vector of ranks for each edge. 0 indicates the coefficient we are
+% least confident in
 %% Author:
 % Peter DeWeirdt - Cincinnati Children's Summer Intern
 %% Date: 6/13/2018
