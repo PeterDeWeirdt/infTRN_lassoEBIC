@@ -41,7 +41,7 @@ lightGreen = [0 .25 0];
 % purple = [103, 2, 94] / 255;
 
 %% Gold standards
-gsFolder = './inputs/priors/';
+gsFolder = './RNAseq_inputs_overlap/priors/';
 % gsPlotGroups = { ...
 %     'KO75','KO75',{'th17_whole_K_cut_prcnt_20_num_tfs_28_sam_0_deseq_cut_0.25_Aug_8_2012_priorCut0p75'},.3};
 %    ...'KC1p5','KC1p5',{'th17_whole_KC_cut_prcnt_20_num_tfs_28_sam_0_deseq_cut_0.25_Aug_8_2012_priorCut1p5'},.2;
@@ -57,10 +57,10 @@ gsFolder = './inputs/priors/';
 %     'KOall','KOall',{'KO75_KOrk_sp.tsv'},.3;
 % };
 
-gsFile = './inputs/priors/KC1p5_sp.tsv';
+gsFile = './RNAseq_inputs_overlap/priors/KC1p5_sp.tsv';
 gsPlotGroups = {'KC1p5_sp.tsv'};
-gsRegsFile = './targetGenesPR_mm9mm10_MTL_overlap.txt';
-targGeneFile = './targetGenes_names_MTL_overlap.txt';
+gsRegsFile = './RNAseq_inputs_overlap/priors/goldStandardGeneLists/targGenesPR_mm9mm10.txt';
+targGeneFile = './RNAseq_inputs_overlap/targRegLists/targetGenes_names.txt';
 if targGeneFile
     geneIn = fopen(targGeneFile,'r');
     C = textscan(geneIn,'%s');
@@ -194,10 +194,12 @@ addOutBit = '_PR';
 % params: (1) weight (g-prior or bias), (2) TFA option, (3) BBSR-BIC or
 % LASSO-StARS, (4) line style, (5) line color, (6) line width
 params = { % NaN --> No Prior
-    1,'TFA','mLASSO-ebic-bulk','-', darkRed,regWidth;
-     1, 'mRNA', 'mMTL-ebic-bulk', '--',pink, regWidth;
-     1, 'TFA', 'mLASSO-ebic-microarray','-',mediumBlue, regWidth;
-     1, 'mRNA', 'mMTL-ebic-microarray', '--',mediumGreen, regWidth};
+    1,'TFA','mLASSO-cv-net','-', darkRed,regWidth;
+    1,'TFA','mLASSO-cv-net-a-0.99','-', pink,regWidth;
+    1,'TFA','mLASSO-cv-net-refit','--', darkRed,regWidth;
+    1,'TFA','mLASSO-cv-gene','--', mediumRed,regWidth
+     1, 'TFA', 'mLASSO-ebic','-',mediumBlue, regWidth;
+     1, 'TFA', 'mLASSO-StARS', '-', darkGreen, regWidth};
     
 %    1, 'TFA', 'LASSO-StARS-bulk','-', darkRed, regWidth};
 
@@ -290,19 +292,22 @@ for tind = 1:totInfResults
 %         prMat = fullfile(infModelDir,noPriorResults);
     else % Model with Prior
         legendInf{tind+1} = [methodInf];
-        if (find(ismember({'mLASSO-ebic-bulk'},methodInf)))
-            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/mLASSO_ebic_bulk_outputs/networks_ebic/50bootstraps_0p01cutoff/PR_KC1p5/ATAC_Th17_bias50.mat');
-        elseif find(ismember({'mLASSO-ebic-microarray'},methodInf))
-            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/mLASSO_microarray_bulk_outputs/networks_ebic/50bootstraps_0p01cutoff/PR_KC1p5/ATAC_Th17_bias50.mat');
-        elseif find(ismember({'mMTL-ebic-microarray'},methodInf))
-            prMat = fullfile('./MTLPR/MTL_microarray.mat');
-        elseif find(ismember({'mMTL-ebic-bulk'},methodInf))
-            prMat = fullfile('./MTLPR/MTL_RNAseq.mat');
+        if (find(ismember({'mLASSO-cv-net'},methodInf)))
+            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/CV_outputs_TH17_full/networks_10Fold_cv/50bootstraps_0p01cutoff/PR_KC1p5/ATAC_Th17_bias50.mat');
+        elseif find(ismember({'mLASSO-ebic'},methodInf))
+            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/ebic_outputs_TH17_full/networks_ebic/50bootstraps_0p01cutoff/PR_KC1p5/ATAC_Th17_bias50.mat');
+        elseif find(ismember({'mLASSO-StARS'},methodInf))
+            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS-master/Th17_example/outputs/networks_targ0p05_SS50_bS5/Network0p05_15tfsPerGene/PR_KC1p5/ATAC_Th17_bias50.mat');
+        elseif find(ismember({'mLASSO-cv-gene'},methodInf))
+            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/CV_outputs_TH17_full/networks_5Fold_cv/50bootstraps_0p01cutoff_rank_confidenceselection_gene/PR_KC1p5/ATAC_Th17_bias50.mat');
+        elseif find(ismember({'mLASSO-cv-net-a-0.99'},methodInf))
+            prMat = fullfile('/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/CV_outputs_TH17_full/networks_5Fold_cv/50bootstraps_0p01cutoff__rank_confidence_selection_network/PR_KC1p5/ATAC_Th17_bias50alpha_0p99.mat');
+        elseif find(ismember({'mLASSO-cv-net-refit'},methodInf))
+            prMat = '/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC/CV_outputs_TH17_full/networks__10Foldcv/50bootstraps_0p01cutoff__rank_confidence_selection_network/PR_KC1p5/ATAC_Th17_bias50_alpha1.mat';
         else
             disp(methodInf)
         end
     end 
-    
     load(prMat)
 
     figure(1) % plot P-R 

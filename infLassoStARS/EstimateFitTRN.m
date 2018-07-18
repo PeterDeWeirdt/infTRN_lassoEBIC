@@ -1,6 +1,6 @@
 function EstimateFitTRN(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
     method,lambdaMin,lambdaMax,totLogLambdaSteps,...
-    FitOutMat,leaveOutSampleList, parallel)
+    FitOutMat,leaveOutSampleList, parallel, nfolds,alpha)
 %% Goal: Estimate mLASSO fit (ebic, aic or bic) for given input prior, prior 
 % reinforcement, TFA methods, and fit method
 %% References:
@@ -44,6 +44,7 @@ function EstimateFitTRN(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
 % leaveOutSampleList -- a text file, where each line corresponds to a
 %   sample condition to be left-out of the inference procedure (e.g., for
 %   the purposes of cross-validation)
+% nfolds -- optional argument for 'cv' method
 %% OUTPUTS:
 % OutMat -- contains network- and gene-level fits,
 %   lambdaRange
@@ -131,10 +132,9 @@ logLamRange =  log10(lambdaMin):lamLog10step:log10(lambdaMax);
 lambdaRange = [10.^logLamRange]';
 options = glmnetSet;
 options.lambda = fliplr(lambdaRange'); % must flip for glmnet
+options.alpha = alpha;
 figure(3), clf
-
-[geneFit, netFit] = getFit(predictorMat, responseMat, priorWeightsMat,...
-    options, method, parallel);
+[geneFit, netFit] = getFit(predictorMat, responseMat, priorWeightsMat,options, method, parallel, nfolds);
 figInf = strrep(FitOutMat,'.mat','');
 saveas(gcf,figInf,'fig')
 fp = fillPage(gcf, 'margins', [0 0 0 0], 'papersize', [6 5]);

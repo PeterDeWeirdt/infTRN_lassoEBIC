@@ -1,5 +1,6 @@
-function buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,...
-    bootCut, nboot, parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse)
+function buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,bootCut,nboot,...
+    parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse,selectionMethod,...
+    alpha)
 %% GOAL: Rank TF-gene interactions according to confidence:
 %           1 - var(residuals_i)/var(residuals [~TF]). 
 %   If outNetFileSparse (file name) is supplied, this fxn will output the TRN 
@@ -44,6 +45,8 @@ function buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,...
 %   visualization tool jp_gene_viz
 %   (https://github.com/simonsfoundation/jp_gene_viz), NOTE: empty string
 %   '' signals not to create this output
+% selectionMethod -- Whether to select parameters using network or per gene
+% fit
 %% OUTPUTS:
 %% ${outDir}/Results_lassoFit/${quantNetFolderName} outputs:
 % trnOutMat -- contains ranked lists of network edges, confidences,
@@ -62,18 +65,27 @@ load(fitOutMat)
 inPriorMat = sign(abs(priorMat));  
 
 %% Calculate confidences and ranks for nbootstraps, plot results
-[~, optInd] = min(netFit);
-optLam = lambdaRange(optInd);
 options = glmnetSet;
-options.lambda = optLam;
+options.alpha = alpha;
+if strcmp(selectionMethod, 'network')   
+    [~, optInd] = within1seMin(netFit);
+    optLam = lambdaRange(optInd);
+    options.lambda = optLam;
+end
 if parallel
     opt = statset('UseParallel', true);
 else 
     opt = statset('UseParallel', false);
 end
 
-boot_confs_rnks_sgns = bootstrp(nboot, @(x, Ys) getConfs(x', Ys', priorWeightsMat, options),...
-    predictorMat', responseMat', 'Options', opt);
+if strcmp(selectionMethod, 'network')  
+    boot_confs_rnks_sgns = bootstrp(nboot, @(x, Ys) getConfs(x', Ys', priorWeightsMat,...
+        options, selectionMethod),predictorMat', responseMat', 'Options', opt);
+else strcmp(selectionMethod, 'gene')  
+    boot_confs_rnks_sgns = bootstrp(nboot, @(x, Ys) getConfs(x', Ys', priorWeightsMat,...
+        options,selectionMethod, geneFit, lambdaRange),predictorMat',...
+        responseMat', 'Options', opt);
+end
 confs = boot_confs_rnks_sgns(:,1); % Each of these is nboots x nGenes x nTFs 
 rnks = boot_confs_rnks_sgns(:,2);
 sgns = boot_confs_rnks_sgns(:,3);
@@ -168,6 +180,7 @@ rankings2 = rankings2(keepRankings(inds));
 
 if outNetFileSparse
     %% Network Edge colors, for jp_gene_viz
+    disp('Writing out Net File')
     medBlue = [0,85,255];
     medRed = [228,26,28];
     lightGrey = [217,217,217];
@@ -214,6 +227,7 @@ if outNetFileSparse
 end
 
 %% save results
+disp('saving_results')
 outMat = [strrep(trnOutMat,'.mat','') '.mat'];
 save(outMat,... 
     'predictorMat',... % include predictorMat

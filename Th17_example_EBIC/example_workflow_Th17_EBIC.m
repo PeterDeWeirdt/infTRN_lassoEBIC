@@ -38,12 +38,12 @@ addpath(fullfile(matlabDir,'MALSAR'))
 
 %% 1. Import gene expression data, list of regulators, list of target genes
 % into a Matlab .mat object
-geneExprTFAdir = './outputs/processedGeneExpTFA';
+geneExprTFAdir = './CV_outputs_TH17_full/processedGeneExpTFA';
 mkdir(geneExprTFAdir)
-normGeneExprFile = './inputs/geneExpression/microarray_data_mm10.txt';
-targGeneFile = './inputs/targRegLists/targetGenes_names_overlap.txt';
-potRegFile = './inputs/targRegLists/potRegs_names.txt';
-tfaGeneFile = './inputs/targRegLists/genesForTFA.txt';
+normGeneExprFile = './RNAseq_inputs_overlap/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt';
+targGeneFile = './RNAseq_inputs_overlap/targRegLists/targetGenes_names.txt';
+potRegFile = './RNAseq_inputs_overlap/targRegLists/potRegs_names.txt';
+tfaGeneFile = './RNAseq_inputs_overlap/targRegLists/genesForTFA.txt';
 geneExprMat = fullfile(geneExprTFAdir,'geneExprGeneLists.mat');
 
 disp('1. importGeneExpGeneLists.m')
@@ -53,7 +53,7 @@ importGeneExpGeneLists(normGeneExprFile,targGeneFile,potRegFile,...
 %% 2. Given a prior of TF-gene interactions, estimate transcription factor 
 % activities (TFAs) using prior-based TFA and TF mRNA levels
 priorName = 'ATAC_Th17';
-priorFile = ['./inputs/priors/' priorName '.tsv']; % Th17 ATAC-seq prior
+priorFile = ['./RNAseq_inputs_overlap/priors/' priorName '.tsv']; % Th17 ATAC-seq prior
 edgeSS = 50;
 minTargets = 3;
 [xx, priorName, ext] = fileparts(priorFile);
@@ -72,10 +72,14 @@ lambdaMax = 1;
 totLogLambdaSteps = 5; % will have this many steps per log10 within bStARS lambda range
 leaveOutSampleList = '';
 leaveOutInf = ''; % leave out information 
-method = 'ebic'; % options are ebic, aic, bic
-fitDir = fullfile('./outputs',strrep(['fits_' method leaveOutInf],'.','p'));
+alpha = 1; %elastic net parameter [0,1]. When alpha = 1 -> lasso, alpha = 0 ->ridge
+method = 'cv'; % options are ebic, aic, bic, and cv
+nfolds = 10; %won't be used if method != cv
+foldInf = '_10Fold';
+fitDir = fullfile('./CV_outputs_TH17_full',strrep(['fits_' foldInf method leaveOutInf],'.','p'));
 mkdir(fitDir)
-netSummary = [priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt];
+netSummary = [priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt...
+    '_alpha' strrep(num2str(alpha),'.','p')];
 fitOutMat = fullfile(fitDir,netSummary);
 parallel = true; 
 if parallel
@@ -87,12 +91,12 @@ end
 disp('3. estimateFitTRN.m')
 EstimateFitTRN(geneExprMat,tfaMat,lambdaBias,tfaOpt,...
     method,lambdaMin,lambdaMax,totLogLambdaSteps,...
-    fitOutMat,leaveOutSampleList, parallel)
+    fitOutMat,leaveOutSampleList, parallel,nfolds,alpha)
 
 %% 4. For the minimum fit score, rank TF-gene
 % interactions, calculate confidences and network file for jp_gene_viz
 % visualizations
-priorMergedTfsFile = ['./inputs/priors/' priorName '_mergedTfs.txt'];
+priorMergedTfsFile = ['./RNAseq_inputs_overlap/priors/' priorName '_mergedTfs.txt'];
 try % not all priors have merged TFs and merged TF files
     ls(priorMergedTfsFile) 
 catch
@@ -101,10 +105,12 @@ end
 nboot = 50;
 bootCut = .01; %Must show up in greater than this many bootstraps to be included in the final model
 rankMethod = 'confidence'; % options are rank or confidence
+selectionMethod = 'network'; % network or gene
 networkDir = strrep(fitDir,'fits','networks');
 mkdir(networkDir);
 networkSubDir = fullfile(networkDir,[num2str(nboot) 'bootstraps_' ...
-    strrep(num2str(bootCut), '.', 'p') 'cutoff']);
+    strrep(num2str(bootCut), '.', 'p') 'cutoff_' '_rank_' rankMethod... 
+    '_selection_' selectionMethod]);
 mkdir(networkSubDir)
 trnOutMat = fullfile(networkSubDir,netSummary);
 outNetFileSparse = fullfile(networkSubDir,[netSummary '_sp.tsv']);
@@ -113,13 +119,15 @@ mkdir(networkHistDir)
 bootsHistPdf = fullfile(networkHistDir,[netSummary '_bsHist']);
 
 disp('4. buildTRNs_mLassoFit.m')
-buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,...
-    bootCut, nboot, parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse)
+buildTRNs_mLassoFit(fitOutMat,tfaMat,priorMergedTfsFile,bootCut, nboot,...
+    parallel, rankMethod , bootsHistPdf, trnOutMat,outNetFileSparse, selectionMethod,...
+    alpha)
+
 %% 5. Calculate precision-recall relative to KO-ChIP G.S.
-gsFile = './inputs/priors/KC1p5_sp.tsv';
+gsFile = './RNAseq_inputs_overlap/priors/KC1p5_sp.tsv';
 prNickName = 'KC1p5';
 rankColTrn = 3;
-prTargGeneFile = './inputs/priors/goldStandardGeneLists/targGenesPR_mm9mm10_overlap.txt';
+prTargGeneFile = './RNAseq_inputs_overlap/priors/goldStandardGeneLists/targGenesPR_mm9mm10_overlap.txt';
 gsRegsFile = '';
 prDir = fullfile(networkSubDir,['PR_' prNickName]);
 mkdir(prDir)

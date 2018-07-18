@@ -34,15 +34,15 @@ addpath(fullfile(matlabDir,'MALSAR'))
 %% 1. Import gene expression data, list of regulators, list of target genes
 % into a Matlab .mat object
 
-task_names = {'microarray','RNAseq'};
+task_names = {'RNAseqWmicro20genes','microarrayWbulk20genes'};
 ntasks = length(task_names);
 geneExprTFAmainDir = './outputs/processedGeneExpTFA';
 geneExprTFAdirs = cellfun(@(x) [geneExprTFAmainDir '/' x], task_names,...
     'UniformOutput', false);
 normGeneExprFiles = {'./RNAseq_inputs/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt',...
-    './microarray_inputs/geneExpression/microarray_data_mm10.txt'};
-targGeneFile = './RNAseq_inputs/targRegLists/targetGenes_names_overlap.txt'; %should be consistent in both folders
-potRegFile = './RNAseq_inputs/targRegLists/potRegs_names.txt';
+    '/Users/dewpz7/Documents/infTRN_lassoStARS/Th17_example_EBIC_MTL/microarray_inputs/geneExpression/microarray_data_mm10.txt'};
+targGeneFile = './RNAseq_inputs/targRegLists/microarray_RNAseq_20_targetGenes.txt'; %should be consistent in both folders
+potRegFile = './RNAseq_inputs/targRegLists/microarray_RNAseq_targetRegs.txt';
 tfaGeneFile = './RNAseq_inputs/targRegLists/genesForTFA.txt';
 geneExprMats = cellfun(@(x) fullfile(x,'geneExprGeneLists.mat'),...
     geneExprTFAdirs, 'UniformOutput', false);
@@ -80,24 +80,18 @@ end
 lambdaBias = .5;
 tfaOpt = ''; % options are '_TFmRNA' or ''
 % Note: will attempt 'lambdaBrange' x 'lambdaSrange' parameter combinations
-lambdaBmin = 0.01;
-lambdaBmax = 1;
-totLogLambdaBSteps = 2; % will have this many steps per log10 within lambda range
-lambdaSmin = 0.01;
-lambdaSmax = 1;
-totLogLambdaSSteps = 2; % will have this many steps per log10 within lambda range
 leaveOutSampleLists = cell(1,ntasks);
 leaveOutInf = ''; % leave out information 
-method = 'ebic'; % options are ebic, aic, bic
-fitDir = fullfile('./outputs',strrep(['fits_' method leaveOutInf],'.','p'));
+fitDir = fullfile('./outputs',strrep(['fitSetup' leaveOutInf],'.','p'));
 mkdir(fitDir)
 netSummaries = cellfun(@(x) [x '_' priorName '_bias' strrep(num2str(100*lambdaBias),'.','p') tfaOpt],...
     task_names, 'UniformOutput', false);
 fitOutMats = cellfun(@(x) fullfile(fitDir,x), netSummaries, 'UniformOutput', false);
-disp('3. estimateMultipleFitsTRN.m')
-EstimateMultipleFitsTRN(geneExprMats,tfaMats,lambdaBias,tfaOpt,...
-    method,lambdaBMin,lambdaBMax,totLogLambdaBSteps,lambdaSMin,...
-    lambdaSMax,totLogLambdaSSteps,fitOutMats,leaveOutSampleList, parallel)
+disp('3. FitSetup.m')
+parfor i = 1:ntasks
+    FitSetup(geneExprMats{i},tfaMats{i},lambdaBias,tfaOpt,...
+        fitOutMats{i},leaveOutSampleLists{i})
+end
 
 %% 4. For the minimum fit score, rank TF-gene
 % interactions, calculate confidences and network file for jp_gene_viz
