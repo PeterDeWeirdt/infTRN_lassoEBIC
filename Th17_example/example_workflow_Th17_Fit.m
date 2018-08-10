@@ -37,8 +37,8 @@ addpath(fullfile(matlabDir,'customMatlabFxns'))
 geneExprTFAdir = './outputs/processedGeneExpTFA';
 mkdir(geneExprTFAdir)
 normGeneExprFile = './inputs/geneExpression/th17_RNAseq254_DESeq2_VSDcounts.txt';
-targGeneFile = './inputs/targRegLists/microarray_RNAseq_targetGenes.txt';
-potRegFile = './inputs/targRegLists/microarray_RNAseq_targetRegs.txt';
+targGeneFile = './inputs/targRegLists/targetGenes_names.txt';
+potRegFile = './inputs/targRegLists/potRegs_names.txt';
 tfaGeneFile = './inputs/targRegLists/genesForTFA.txt';
 geneExprMat = fullfile(geneExprTFAdir,'geneExprGeneLists.mat');
 
@@ -99,7 +99,7 @@ catch
     priorMergedTfsFile = '';
 end
 nboot = 50;
-bootCut = .01; %Must show up in greater than this many bootstraps to be included in the final model
+bootCut = .01; %Must show up in greater than this fraction of bootstraps to be included in the final model
 rankMethod = 'confidence'; % options are rank or confidence
 selectionMethod = 'network'; % network or gene
 networkDir = strrep(fitDir,'fits','networks');

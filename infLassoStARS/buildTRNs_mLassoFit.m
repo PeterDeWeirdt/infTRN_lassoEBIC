@@ -114,10 +114,10 @@ rankCombine = sum(rnksMat, 3);
 normRankCombine = rankCombine/max(rankCombine(:));
 confCombine = sum(confsMat, 3);
 normConfCombine = confCombine/max(confCombine(:));
-nRemoved = length(find(normRankCombine)) - length(find(signCombine));
-disp(['Removing ' num2str(nRemoved) ' edges because bootstraps could not reach a consensus on sign.'])
-signRankCombine = normRankCombine.*signCombine;
-signConfCombine = normConfCombine.*signCombine;
+% nRemoved = length(find(normRankCombine)) - length(find(signCombine));
+% disp(['Removing ' num2str(nRemoved) ' edges because bootstraps could not reach a consensus on sign.'])
+% signRankCombine = normRankCombine.*signCombine;
+% signConfCombine = normConfCombine.*signCombine;
 % scatter(signRankCombine(keepRankings), signConfCombine(keepRankings));
 % xlabel('Rank Combine')
 % ylabel('Confidene Combine')
@@ -132,9 +132,9 @@ regs1 = repmat(allPredictors',totNetGenes,1);
 regs = reshape(regs1,totInts,1);
 
 if strcmp(rankMethod,'rank')
-    rankings = signRankCombine;
+    rankings = normRankCombine;
 elseif strcmp(rankMethod,'confidence')
-    rankings = signConfCombine;
+    rankings = normConfCombine;
 else
     disp('Ranking method not yet supported.')
     return
@@ -167,10 +167,10 @@ regs = {regs{keepRankings(inds)}}';
 targs = {targs{keepRankings(inds)}}';
 totInfInts = length(rankings);
 if strcmp(rankMethod,'rank')
-    rankings2 = signConfCombine;
+    rankings2 = normConfCombine;
     rank2 = 'confidence';
 elseif strcmp(rankMethod,'confidence')
-    rankings2 = signRankCombine;
+    rankings2 = normRankCombine;
     rank2 = 'rank';
 end
 rankings2 = rankings2(keepRankings(inds));
